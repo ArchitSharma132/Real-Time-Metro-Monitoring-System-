@@ -172,7 +172,7 @@ def get_location_forecast():
 @login_required
 def chat_proxy():
     # --- This key is now defined at the top of the file ---
-    GEMINI_API_KEY = "AIzaSyDZlx2mvzTl3SpklkmLqBBgeM8o3IUbMfg"
+    GEMINI_API_KEY = ""
     GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     if "YOUR_GEMINI_API_KEY" in GEMINI_API_KEY or not GEMINI_API_KEY:
@@ -193,4 +193,5 @@ def chat_proxy():
     return jsonify({"error": "Failed to communicate with the AI service.", "details": error_details}), 500
     
 if __name__ == "__main__":
+
     app.run(debug=True, port=3001)

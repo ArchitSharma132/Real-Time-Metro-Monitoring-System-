@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KochiConnect AI Demand Forecasting System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        :root {
+            --primary-color: #00514d;
+            --secondary-color: #406c5f;
+            --accent-color: #16A79F;
+            --accent-hover: #067d77;
+            --background-color: #f9faf9;
+            --card-bg: #ffffff;
+            --border-color: #d1ead7;
+            --text-color: #13675d;
+            --muted-text-color: #49695f;
+            --input-bg: #f3faf7;
+            --schedule-item-bg: #e5f9f6;
+            --shadow-sm: 0 1px 3px rgba(87, 151, 143, 0.1);
+            --shadow-md: 0 4px 8px rgba(87, 151, 143, 0.15);
+            --radius-md: 14px;
+            --radius-lg: 24px;
+            --transition-speed: 0.2s;
+            --font-family: 'Inter', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; font-family: var(--font-family); background-color: var(--background-color); color: var(--text-color); line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 0 2rem; }
+
+        header.header {
+            position: sticky; top: 0; z-index: 1100;
+            background-color: var(--primary-color);
+            padding: 0.75rem 2rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header.header .title-container { display: flex; flex-direction: column; align-items: flex-start; }
+        header.header h1 { color: #e6f2f0; font-size: 1.75rem; cursor: pointer; margin: 0; line-height: 1.1; }
+        header.header .subtitle { color: #c3ddd9; font-size: 0.8rem; font-weight: 300; opacity: 0.9; margin-top: 2px; }
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+.profile-dropdown {
+    position: relative;
+    display: inline-block;
+}
+.profile-btn {
+    background: none;
+    border: none;
+    color: #e6f2f0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+}
+.profile-btn svg {
+    transition: transform 0.2s;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%; /* <-- Change this value from 150% */
+    background-color: var(--card-bg);
+    min-width: 220px;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+    z-index: 1200;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+.dropdown-content .dropdown-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+}
+.dropdown-header span {
+    display: block;
+    color: var(--muted-text-color);
+    font-size: 0.9rem;
+}
+.dropdown-content a {
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    display: block;
+    font-weight: 500;
+}
+.dropdown-content a:hover {
+    background-color: var(--input-bg);
+}
+.profile-dropdown:hover .dropdown-content {
+    display: block;
+}
+.profile-dropdown:hover .profile-btn svg {
+    transform: rotate(180deg);
+}
+        #username-display { font-weight: 600; }
+        
+        nav.tab-navigation {
+            display: flex; gap: .75rem; margin-bottom: 2rem;
+            background: var(--card-bg); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm); padding: .5rem;
+            overflow-x: auto;
+        }
+        button.tab-btn {
+            flex: 1 1 auto; padding: .75rem 1.5rem; font-weight: 600;
+            font-size: 1rem; color: var(--secondary-color);
+            background: transparent; border-radius: var(--radius-md);
+            border: none; cursor: pointer;
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+            white-space: nowrap;
+        }
+        button.tab-btn.active { background: var(--accent-color); color: var(--card-bg); }
+        button.tab-btn:hover:not(.active) { background: var(--input-bg); }
+
+        section.content-section {
+            background: var(--card-bg); border-radius: var(--radius-lg);
+            padding: 2.5rem 3rem; margin-bottom: 2.5rem;
+            box-shadow: var(--shadow-md); border: 1px solid var(--border-color);
+        }
+        h2.section-title {
+            font-size: 1.5rem; color: var(--primary-color);
+            margin-top: 0; margin-bottom: 2rem;
+            display: flex; align-items: center;
+        }
+
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .control-group label { display: block; margin-bottom: .4rem; font-weight: 600; color: var(--muted-text-color); }
+        .control-group select, .control-group input { width: 100%; padding: .7rem 1rem; border-radius: 14px; border: 1.5px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); }
+        .action-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .btn { padding: .8rem 1.75rem; border-radius: 14px; font-weight: 700; font-size: 1rem; color: #fff; border: none; cursor: pointer; flex: 1 1 160px; }
+        .btn-primary { background-color: var(--accent-color); }
+        .btn-secondary { background-color: #547c6f; }
+        .btn-warning { background-color: #f4a261; }
+
+        .time-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+        .time-card { background: var(--card-bg); border-radius: var(--radius-lg); padding: 1.75rem 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); text-align: center; }
+        .time-card .label { font-size: 1.1rem; font-weight: 600; color: var(--muted-text-color); margin-bottom: 1rem; }
+        .current-time, .countdown { font-size: 3rem; font-weight: 900; color: var(--primary-color); }
+        .next-update { font-size: .9rem; font-weight: 500; color: var(--muted-text-color); margin-top: .5rem; display: block; }
+        .stats-grid { display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .stat-card { background: var(--card-bg); border-radius: var(--radius-lg); padding: 1.75rem 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); }
+        .stat-label { font-size: 1rem; font-weight: 600; color: var(--muted-text-color); margin-bottom: .35rem; }
+        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--primary-color); }
+
+        .chart-wrapper { height: 400px; width: 100%; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+        .forecasting-container { display: flex; gap: 2rem; height: 550px; }
+        .forecast-map-area { flex: 3; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+        .forecast-controls-area { flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
+        .control-panel-section { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; }
+        .control-panel-section h4 { margin-top: 0; margin-bottom: 1rem; color: var(--muted-text-color); font-weight: 600; }
+        .control-panel-section .btn { width: 100%; padding: 0.6rem; font-size: 0.9rem; }
+        .map-legend { display: flex; flex-direction: column; gap: 0.75rem; }
+        .legend-item { display: flex; align-items: center; gap: 0.75rem; font-weight: 500; color: var(--muted-text-color); font-size: 0.9rem; }
+        .legend-color { display: inline-block; width: 16px; height: 16px; border-radius: 50%; }
+
+        .schedule-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2.5rem; }
+        .schedule-panel { background: var(--card-bg); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); }
+        .schedule-list { display: flex; flex-direction: column; gap: 1rem; }
+        .schedule-item { display: flex; align-items: center; justify-content: space-between; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; }
+        .schedule-item-time { font-weight: 700; font-size: 1.25rem; color: var(--primary-color); }
+        .schedule-item-status { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; padding: 0.4rem 0.8rem; border-radius: 8px; }
+        .schedule-item-status svg { width: 16px; height: 16px; }
+        .status-suggested { color: #14532d; background-color: #dcfce7; }
+        .status-confirmed { color: #1e40af; background-color: #dbeafe; }
+        .status-override { color: #7c2d12; background-color: #ffedd5; }
+        
+        .simulation-view-container { display: flex; gap: 2rem; margin-top: 2rem; }
+        .simulation-panel { flex: 1; min-width: 0; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.5rem; }
+        .panel-title { font-size: 1.1rem; font-weight: 600; color: var(--muted-text-color); margin-top: 0; margin-bottom: 1.5rem; text-align: center; }
+        .station-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+        .station-card { background: var(--card-bg); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; box-shadow: var(--shadow-sm); border: 1.5px solid var(--border-color); }
+        .station-name { font-weight: 700; color: var(--primary-color); font-size: 1rem; margin-bottom: .75rem; }
+        .passenger-count { font-size: 2rem; font-weight: 900; color: var(--accent-color); }
+        
+        .tooltip-icon { display: inline-block; position: relative; margin-left: 8px; width: 20px; height: 20px; background-color: #cce2e1; color: var(--primary-color); border-radius: 50%; text-align: center; font-weight: bold; cursor: help; font-size: 14px; line-height: 20px; }
+        .tooltip-icon .tooltip-text { visibility: hidden; width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-weight: normal; font-size: 0.85rem; }
+        .tooltip-icon:hover .tooltip-text { visibility: visible; opacity: 1; }
+        
+        .chatbot-container { display: flex; flex-direction: column; background: var(--card-bg); height: 600px; padding: 2rem; }
+        .chat-messages { flex: 1; overflow-y: auto; margin-bottom: 1rem; background: var(--input-bg); border-radius: var(--radius-md); padding: 1.5rem; }
+        .chat-message { display: flex; gap: 1rem; margin-bottom: 1rem; max-width: 75%; }
+        .chat-message.user { flex-direction: row-reverse; margin-left: auto; }
+        .message-bubble { padding: 1rem 1.5rem; border-radius: 24px; }
+        .message-bubble.user { background-color: var(--primary-color); color: #e6f2f0; }
+        .message-bubble.bot { background-color: var(--schedule-item-bg); color: var(--primary-color); }
+        .chat-input { display: flex; gap: 1rem; }
+        .chat-input input { flex-grow: 1; padding: .85rem 1.25rem; border-radius: var(--radius-lg); border: 1.5px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); }
+        .send-btn { background-color: var(--primary-color); color: #e6f2f0; border-radius: var(--radius-md); padding: 0 1.5rem; border: none; cursor: pointer; font-weight: 600; }
+        .loading-bubble { font-style: italic; color: var(--muted-text-color); }
+        /* Dark Mode Toggle Switch */
+.toggle-wrapper {
+    display: flex;
+    align-items: center;
+}
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #5a7a78;
+    transition: 0.4s;
+    border-radius: 28px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+/* --- NEON NOIR (Dark Mode) Theme --- */
+body.dark-mode {
+    --primary-color: #00f0ff;      /* Neon Cyan */
+    --secondary-color: #ff00ff;    /* Neon Magenta */
+    --accent-color: #00f0ff;
+    --accent-hover: #00c0cc;
+    --background-color: #0d0d0d;  /* Near Black */
+    --card-bg: #1a1a1a;          /* Dark Grey */
+    --border-color: #333333;
+    --text-color: #e0e0e0;
+    --muted-text-color: #888888;
+    --input-bg: #2a2a2a;
+    --schedule-item-bg: #2a2a2a;
+}
+
+/* Header */
+body.dark-mode header.header {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid var(--border-color);
+}
+body.dark-mode header.header h1,
+body.dark-mode .profile-btn {
+    color: var(--primary-color);
+}
+body.dark-mode .account-info a {
+    color: var(--primary-color);
+}
+body.dark-mode .slider {
+    background-color: #444;
+}
+
+/* Main Content */
+body.dark-mode nav.tab-navigation {
+    background-color: var(--card-bg);
+}
+body.dark-mode button.tab-btn {
+    color: var(--muted-text-color);
+}
+body.dark-mode button.tab-btn.active {
+    background: var(--primary-color);
+    color: #0d0d0d;
+    font-weight: 700;
+}
+body.dark-mode .stat-value {
+    color: var(--primary-color);
+}
+body.dark-mode .passenger-count {
+    color: var(--accent-color);
+}
+
+/* Schedule */
+body.dark-mode .status-suggested {
+    color: #00f0ff;
+    background-color: #003c40;
+    border: 1px solid #00f0ff;
+}
+body.dark-mode .status-confirmed {
+    color: #ff00ff;
+    background-color: #3d003d;
+    border: 1px solid #ff00ff;
+}
+body.dark-mode .status-override {
+    color: #f0ff00;
+    background-color: #404000;
+    border: 1px solid #f0ff00;
+}
+
+/* Map & Chart */
+body.dark-mode .leaflet-tile {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+body.dark-mode .chart-wrapper {
+    background-color: var(--card-bg);
+    border-radius: var(--radius-md);
+}
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="title-container">
+            <h1 onclick="switchTab('dashboard')">KochiConnect</h1>
+            <div class="subtitle">Real-time Passenger Demand Prediction & Schedule Optimization</div>
+        </div>
+        <div class="account-info">
+    <div class="toggle-wrapper">
+        <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="profile-dropdown">
+        <button class="profile-btn">
+            <span id="username-display">admin</span>
+            <svg fill="currentColor" viewBox="0 0 20 20" width="20" height="20"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.06z" clip-rule="evenodd"></path></svg>
+        </button>
+        <div class="dropdown-content">
+            <div class="dropdown-header">
+                <strong>Signed in as</strong>
+                <span id="user-id-display">admin</span>
+            </div>
+            <a href="#" onclick="alert('Settings clicked!')">Settings</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+</div>
+    </header>
+    <main class="container">
+        <nav class="tab-navigation">
+            <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-btn" id="tab-forecasting" onclick="switchTab('forecasting')">Forecasting</button>
+            <button class="tab-btn" id="tab-analytics" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab-btn" id="tab-schedule" onclick="switchTab('schedule')">Schedule</button>
+            <button class="tab-btn" id="tab-simulation" onclick="switchTab('simulation')">Simulation</button>
+            <button class="tab-btn" id="tab-chatbot" onclick="switchTab('chatbot')">AI Assistant</button>
+        </nav>
+
+        <section id="dashboard" class="tab-content">
+            <section class="content-section">
+                <h2 class="section-title">System Controls <span class="tooltip-icon">?<span class="tooltip-text">Adjust parameters to see their impact on forecasts.</span></span></h2>
+                <div class="controls">
+                    <div class="control-group"><label for="timePeriod">Time Period</label><select id="timePeriod"><option>Evening Peak (4-8 PM)</option><option>Morning Peak (7-10 AM)</option></select></div>
+                    <div class="control-group"><label for="weatherConditions">Weather Conditions</label><select id="weatherConditions"><option>Clear</option><option>Rainy</option></select></div>
+                    <div class="control-group"><label for="minHeadway">Minimum Headway (minutes)</label><input type="number" id="minHeadway" value="3"/></div>
+                </div>
+                <div class="action-buttons" style="margin-top: 2rem;">
+                    <button class="btn btn-primary" onclick="generateForecast()">Generate Forecast</button>
+                    <button class="btn btn-secondary" onclick="runOptimization()">Optimize Schedule</button>
+                    <button class="btn btn-warning" onclick="manualRefresh()">Manual Refresh</button>
+                </div>
+            </section>
+            <div class="time-status-grid">
+                <article class="time-card"><div class="label">Current Time</div><div class="current-time" id="currentTime">00:00:00</div><div class="next-update" id="nextAutoUpdate">...</div></article>
+                <article class="time-card"><div class="label">Next Update Countdown</div><div class="countdown" id="countdown">00:00</div></article>
+            </div>
+            <section class="stats-grid" style="margin-top: 2rem;">
+                <article class="stat-card"><div class="stat-info"><div class="stat-label">Current Demand</div><div class="stat-value" id="currentDemand">...</div></div></article>
+                <article class="stat-card"><div class="stat-info"><div class="stat-label">Active Trains</div><div class="stat-value" id="activeTrains">...</div></div></article>
+                <article class="stat-card"><div class="stat-info"><div class="stat-label">Avg Wait Time (min)</div><div class="stat-value" id="avgWaitTime">...</div></div></article>
+                <article class="stat-card"><div class="stat-info"><div class="stat-label">System Efficiency (%)</div><div class="stat-value" id="systemEfficiency">...</div></div></article>
+            </section>
+        </section>
+
+        <section id="forecasting" class="tab-content" hidden>
+            <section class="content-section">
+                <h2 class="section-title">Location-Based Demand Forecast <span class="tooltip-icon">?<span class="tooltip-text">Interactive map showing predicted passenger load at each station.</span></span></h2>
+                <div class="forecasting-container">
+                    <div id="forecastMap" class="forecast-map-area"></div>
+                    <div class="forecast-controls-area">
+                        <div class="control-panel-section">
+                            <h4>Map Legend</h4>
+                            <div class="map-legend">
+                                <div class="legend-item"><span class="legend-color" style="background-color: #d9534f;"></span>High Demand (>200)</div>
+                                <div class="legend-item"><span class="legend-color" style="background-color: #f0ad4e;"></span>Medium Demand (100-200)</div>
+                                <div class="legend-item"><span class="legend-color" style="background-color: #5cb85c;"></span>Low Demand (&lt;100)</div>
+                            </div>
+                        </div>
+                        <div class="control-panel-section">
+                            <h4>Map Controls</h4>
+                            <button class="btn btn-secondary" onclick="recenterMap()">Recenter Map</button>
+                        </div>
+                        <div class="control-panel-section">
+                            <h4>Data Visualization</h4>
+                            <button class="btn btn-secondary" onclick="connectStations()">Connect Stations</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <section id="analytics" class="tab-content" hidden>
+            <section class="content-section">
+                <div class="chart-header"><h2 class="section-title">Historical vs. Predicted Demand <span class="tooltip-icon">?<span class="tooltip-text">Compares actual passenger demand from the database against AI predictions.</span></span></h2></div>
+                <div class="chart-wrapper"><canvas id="demandChart"></canvas></div>
+            </section>
+        </section>
+
+        <section id="schedule" class="tab-content" hidden>
+            <div class="schedule-section">
+                <section class="schedule-panel">
+                    <h2 class="section-title">AI Suggested Schedule <span class="tooltip-icon">?<span class="tooltip-text">An optimized schedule generated by the AI to meet demand.</span></span></h2>
+                    <div id="suggestedSchedule" class="schedule-list"></div>
+                </section>
+                <section class="schedule-panel">
+                    <h2 class="section-title">Current Schedule <span class="tooltip-icon">?<span class="tooltip-text">The schedule currently in operation, including manual overrides.</span></span></h2>
+                    <div id="currentSchedule" class="schedule-list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section id="simulation" class="tab-content" hidden>
+            <section class="content-section">
+                <h2 class="section-title">Digital Twin Simulation <span class="tooltip-icon">?<span class="tooltip-text">Side-by-side view of live station data and the AI's forecast.</span></span></h2>
+                <p style="color:var(--muted-text-color); margin-top:-1rem; margin-bottom:1.5rem;">Metro Line Status: <span style="font-weight:600; color:var(--primary-color);">Active</span></p>
+                <div class="simulation-view-container">
+                    <div class="simulation-panel"><h3 class="panel-title">Live Passenger Count</h3><div class="station-grid" id="stationGrid-actual"></div></div>
+                    <div class="simulation-panel"><h3 class="panel-title">AI Predicted Passenger Count</h3><div class="station-grid" id="stationGrid-predicted"></div></div>
+                </div>
+            </section>
+        </section>
+
+        <section id="chatbot" class="tab-content" hidden>
+            <section class="content-section chatbot-container">
+                <h2 class="section-title">AI Assistant <span class="tooltip-icon">?<span class="tooltip-text">Ask questions to get information about system status, demand, etc.</span></span></h2>
+                <div class="chat-messages" id="chatMessages"></div>
+                <form class="chat-input" onsubmit="event.preventDefault(); sendMessage();">
+                    <input type="text" id="chatInput" placeholder="Ask 'is the system working?'" required />
+                    <button type="submit" class="send-btn">Send</button>
+                </form>
+            </section>
+        </section>
+    </main>
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:3001';
+        let demandChart, autoUpdateInterval, countdownValue = 900, forecastMap, stationConnections = [];
+
+        window.onload = function() {
+            fetchCurrentUserAndInitialize();
+        };
+
+        async function fetchCurrentUserAndInitialize() {
+    // Dark mode check
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.getElementById('darkModeToggle').checked = true;
+    }
+
+    try {
+        const response = await fetch('/api/current_user', {credentials: 'include'});
+        if (!response.ok) { window.location.href = '/'; return; }
+        const data = await response.json();
+        if (data.is_logged_in) {
+            document.getElementById('username-display').textContent = data.username;
+            document.getElementById('user-id-display').textContent = data.username; // Set username in dropdown
+            switchTab('dashboard');
+            updateTimeAndCountdown();
+            autoUpdateInterval = setInterval(updateTimeAndCountdown, 1000);
+        } else {
+            window.location.href = '/';
+        }
+    } catch (error) {
+        console.error('Could not fetch user status:', error);
+        window.location.href = '/';
+    }
+}
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.hidden = true);
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).hidden = false;
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'dashboard') updateStatistics();
+            if (tabName === 'forecasting') initializeForecastingMap();
+            if (tabName === 'analytics') initializeChart();
+            if (tabName === 'schedule') updateSchedules();
+            if (tabName === 'simulation') initializeSimulation();
+        }
+
+        async function updateStatistics() {
+            const response = await fetch('/api/live', {credentials: 'include'});
+            const stats = await response.json();
+            document.getElementById('currentDemand').textContent = stats.currentDemand.toLocaleString();
+            document.getElementById('activeTrains').textContent = stats.activeTrains;
+            document.getElementById('avgWaitTime').textContent = stats.avgWaitTime;
+            document.getElementById('systemEfficiency').textContent = stats.systemEfficiency;
+        }
+
+        function updateTimeAndCountdown() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            document.getElementById('nextAutoUpdate').textContent = `Next auto-update at ${new Date(now.getTime() + countdownValue * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+            countdownValue--;
+            if (countdownValue < 0) { countdownValue = 900; updateStatistics(); }
+            const minutes = Math.floor(countdownValue / 60).toString().padStart(2, '0');
+            const seconds = (countdownValue % 60).toString().padStart(2, '0');
+            document.getElementById('countdown').textContent = `${minutes}:${seconds}`;
+        }
+
+        function generateForecast() {
+    // This function no longer switches tabs
+    const resultsSection = document.getElementById('controlResults');
+    const resultsTitle = document.getElementById('controlResultsTitle');
+    const resultsContent = document.getElementById('controlResultsContent');
+
+    resultsTitle.textContent = "Forecast Generated";
+    resultsContent.innerHTML = "<p>A new 1-hour passenger demand forecast has been successfully generated based on the current system parameters. The 'Analytics' tab has been updated with the new data.</p>";
+    resultsSection.hidden = false;
+    
+    // We still call the original function to update the chart in the background
+    refreshChart();
+}
+        function runOptimization() {
+    // This function no longer switches tabs
+    const resultsSection = document.getElementById('controlResults');
+    const resultsTitle = document.getElementById('controlResultsTitle');
+    const resultsContent = document.getElementById('controlResultsContent');
+
+    resultsTitle.textContent = "Schedule Optimized";
+    resultsContent.innerHTML = "<p>A new optimized train schedule has been generated based on the latest forecast. The 'Schedule' tab has been updated with new AI suggestions.</p>";
+    resultsSection.hidden = false;
+
+    // We still call the original function to update the schedule in the background
+    updateSchedules();
+}
+        function manualRefresh() {
+    // This function now provides user feedback
+    updateStatistics(); // This is the original line
+    
+    const resultsSection = document.getElementById('controlResults');
+    const resultsTitle = document.getElementById('controlResultsTitle');
+    const resultsContent = document.getElementById('controlResultsContent');
+
+    resultsTitle.textContent = "Data Refreshed";
+    resultsContent.innerHTML = "<p>The dashboard statistics (Current Demand, Active Trains, etc.) have been manually refreshed with the latest data from the server.</p>";
+    resultsSection.hidden = false;
+}
+function closeControlResults() {
+    document.getElementById('controlResults').hidden = true;
+}
+
+        async function initializeForecastingMap() {
+            if (forecastMap) return;
+            forecastMap = L.map('forecastMap').setView([9.9816, 76.2999], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(forecastMap);
+            const response = await fetch('/api/location_forecast', {credentials: 'include'});
+            const forecastData = await response.json();
+            forecastData.forEach(station => {
+                let color = station.predicted_demand > 200 ? '#d9534f' : station.predicted_demand > 100 ? '#f0ad4e' : '#5cb85c';
+                L.circle([station.lat, station.lon], { color, fillColor: color, fillOpacity: 0.6, radius: station.predicted_demand * 2 })
+                 .addTo(forecastMap).bindPopup(`<b>${station.name}</b><br>Predicted Demand: ${station.predicted_demand}`);
+            });
+        }
+        function recenterMap() { if (forecastMap) { forecastMap.setView([9.9816, 76.2999], 12); } }
+        async function connectStations() {
+            if (!forecastMap) return;
+            if (stationConnections.length > 0) { stationConnections.forEach(line => forecastMap.removeLayer(line)); stationConnections = []; return; }
+            const response = await fetch('/api/location_forecast', {credentials: 'include'});
+            const forecastData = await response.json();
+            const latlngs = forecastData.map(station => [station.lat, station.lon]);
+            const polyline = L.polyline(latlngs, {color: '#00514d', weight: 3, opacity: 0.7}).addTo(forecastMap);
+            stationConnections.push(polyline);
+        }
+
+        async function initializeChart() {
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? '#e0e0e0' : '#49695f';
+
+    if (demandChart) { 
+        updateChartForDarkMode(isDarkMode);
+        refreshChart();
+        return; 
+    }
+    
+    const ctx = document.getElementById('demandChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
+    gradient.addColorStop(1, 'rgba(0, 240, 255, 0)');
+
+    demandChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [
+            { label: 'Actual Demand', data: [], borderColor: '#00f0ff', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4 },
+            { label: 'AI Predicted Demand', data: [], borderColor: '#ff00ff', borderWidth: 2, fill: false, tension: 0.4, borderDash: [5, 5] }
+        ]},
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor }
+                }
+            }
+        }
+    });
+    refreshChart();
+}
+        async function refreshChart() {
+            const response = await fetch('/api/analytics/historical_demand', {credentials: 'include'});
+            const data = await response.json();
+            demandChart.data.labels = data.labels;
+            demandChart.data.datasets[0].data = data.actual;
+            demandChart.data.datasets[1].data = data.predicted;
+            demandChart.update();
+        }
+        
+        async function updateSchedules() {
+            const [sugRes, curRes] = await Promise.all([fetch('/api/schedule/suggested', {credentials: 'include'}), fetch('/api/schedule/current', {credentials: 'include'})]);
+            const sugData = await sugRes.json(); const curData = await curRes.json();
+            document.getElementById('suggestedSchedule').innerHTML = sugData.map(i => `<div class="schedule-item"><div class="schedule-item-time">${i.time}</div><div class="schedule-item-status status-suggested">${i.status}</div></div>`).join('');
+            document.getElementById('currentSchedule').innerHTML = curData.map(i => `<div class="schedule-item"><div class="schedule-item-time">${i.time}</div><div class="schedule-item-status status-${i.status.toLowerCase().replace(' ','-')}">${i.status}</div></div>`).join('');
+        }
+
+        async function initializeSimulation() {
+            const response = await fetch('/api/simulation/initial_state', {credentials: 'include'});
+            const data = await response.json();
+            document.getElementById('stationGrid-actual').innerHTML = data.map(s => `<div class="station-card"><div class="station-name">${s.station_name}</div><div class="passenger-count">${s.actual_passengers}</div></div>`).join('');
+            document.getElementById('stationGrid-predicted').innerHTML = data.map(s => `<div class="station-card"><div class="station-name">${s.station_name}</div><div class="passenger-count">${s.predicted_passengers}</div></div>`).join('');
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+            addChatMessage(prompt, 'user');
+            input.value = '';
+            const loadingBubble = addChatMessage('', 'bot', true);
+            const statusRes = await fetch('/api/status', {credentials: 'include'});
+            const statusData = await statusRes.json();
+            const aiRes = await getGeminiResponse(prompt, statusData);
+            loadingBubble.innerHTML = aiRes;
+        }
+        
+        function addChatMessage(message, sender, isLoading = false) {
+            const container = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${sender}`;
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble ${sender}`;
+            if (isLoading) { bubble.textContent = `...`; } else { bubble.innerHTML = message; }
+            msgDiv.appendChild(bubble);
+container.appendChild(msgDiv);
+container.scrollTop = container.scrollHeight;
+            return bubble;
+        }
+
+        async function getGeminiResponse(prompt, statusData) {
+            const context = `System Health: Backend=${statusData.backend_status}, DB=${statusData.database_status}.`;
+            const response = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ prompt, context }), credentials: 'include' });
+            const data = await response.json();
+            if (!response.ok) throw new Error('API chat proxy failed');
+            return data.candidates[0].content.parts[0].text.replace(/\*\*/g, '<strong>').replace(/\n/g, '<br>');
+        }
+        document.getElementById('darkModeToggle').addEventListener('change', function() {
+    if (this.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+        updateChartForDarkMode(true);
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+        updateChartForDarkMode(false);
+    }
+});
+
+function updateChartForDarkMode(isDarkMode) {
+    if (!demandChart) return;
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? '#e0e0e0' : '#49695f';
+    
+    demandChart.options.scales.x.grid.color = gridColor;
+    demandChart.options.scales.y.grid.color = gridColor;
+    demandChart.options.scales.x.ticks.color = textColor;
+    demandChart.options.scales.y.ticks.color = textColor;
+    demandChart.options.plugins.legend.labels.color = textColor;
+    
+    demandChart.update();
+}
+    </script>
+    <section id="controlResults" class="content-section" hidden>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 class="section-title" id="controlResultsTitle" style="margin-bottom: 0;">Results</h2>
+                    <button onclick="closeControlResults()" style="background:none; border:none; font-size: 1.5rem; cursor:pointer; color: var(--muted-text-color);">&times;</button>
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin-top: 1rem;">
+                <div id="controlResultsContent" style="margin-top: 1rem;">
+                    </div>
+            </section>
+
+            <div class="time-status-grid">
+</body>
+</html>
